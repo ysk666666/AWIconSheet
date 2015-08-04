@@ -18,12 +18,16 @@
 
 @property (nonatomic, strong) UIView *backgroundMask;
 @property (nonatomic, strong) UIView *contentView;
+@property (nonatomic, assign) BOOL showCancelButton;
 @end
 @implementation AWActionSheet
 @synthesize scrollView;
 @synthesize pageControl;
 @synthesize items;
 @synthesize IconDelegate;
+
+static float scrollviewToFrame = 10.0f;
+
 -(void)dealloc
 {
     IconDelegate= nil;
@@ -37,6 +41,7 @@
     if (self) {
         self.backgroundColor = [UIColor clearColor];
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        self.showCancelButton = YES;
         
         self.backgroundMask = [[UIView alloc] initWithFrame:self.bounds];
         self.backgroundMask.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
@@ -53,7 +58,7 @@
         self.itemCountforOneLine = 4;
         
         IconDelegate = delegate;
-        self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 10, CGRectGetWidth(self.contentView.bounds), 105*3)];
+        self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(scrollviewToFrame, 10, CGRectGetWidth(self.contentView.bounds) - scrollviewToFrame * 2, 105*3)];
         [scrollView setPagingEnabled:YES];
         [scrollView setBackgroundColor:[UIColor clearColor]];
         [scrollView setShowsHorizontalScrollIndicator:NO];
@@ -64,7 +69,7 @@
         
         [self.contentView addSubview:scrollView];
         
-        self.pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(0, CGRectGetHeight(self.scrollView.frame), CGRectGetWidth(self.contentView.bounds), 20)];
+        self.pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(0, CGRectGetHeight(self.scrollView.frame), CGRectGetWidth(self.scrollView.bounds), 20)];
         [pageControl setNumberOfPages:0];
         [pageControl setCurrentPage:0];
         pageControl.hidesForSinglePage = YES;
@@ -128,12 +133,13 @@ static AWActionSheet *sheet = nil;
     int rowCount = 3;
     
     if (count <= self.itemCountforOneLine) {
-        [scrollView setFrame:CGRectMake(0, 10, CGRectGetWidth(self.contentView.bounds), 105)];
+        [scrollView setFrame:CGRectMake(scrollviewToFrame, 10, CGRectGetWidth(self.contentView.bounds) - scrollviewToFrame * 2, 105)];
         rowCount = 1;
     } else if (count <= self.itemCountforOneLine*2) {
-        [scrollView setFrame:CGRectMake(0, 10, CGRectGetWidth(self.contentView.bounds), 210)];
+        [scrollView setFrame:CGRectMake(scrollviewToFrame, 10, CGRectGetWidth(self.contentView.bounds) - scrollviewToFrame * 2, 210)];
         rowCount = 2;
     }
+    self.scrollView.backgroundColor = [UIColor whiteColor];
     
     CGFloat pageControlY = CGRectGetMinY(self.scrollView.frame) + CGRectGetHeight(self.scrollView.frame);
     CGRect pageControlFrame = self.pageControl.frame;
@@ -141,7 +147,7 @@ static AWActionSheet *sheet = nil;
     self.pageControl.frame = pageControlFrame;
 
     NSUInteger itemPerPage = self.itemCountforOneLine*rowCount;
-    [scrollView setContentSize:CGSizeMake(CGRectGetWidth(self.contentView.bounds)*ceilf((((float)count)/itemPerPage)), scrollView.frame.size.height)];
+    [scrollView setContentSize:CGSizeMake(CGRectGetWidth(self.scrollView.bounds)*ceilf((((float)count)/itemPerPage)), scrollView.frame.size.height)];
     [pageControl setNumberOfPages:ceilf((((float)count)/itemPerPage))];
     [pageControl setCurrentPage:0];
     
@@ -159,38 +165,47 @@ static AWActionSheet *sheet = nil;
         float centerY = (1+row*2)*self.scrollView.frame.size.height/(2*rowCount);
         float centerX = (1+column*2)*width/(2*self.itemCountforOneLine);
         
-        [cell setCenter:CGPointMake(margin + centerX+CGRectGetWidth(self.contentView.bounds)*PageNo, centerY)];
+        [cell setCenter:CGPointMake(margin + centerX+CGRectGetWidth(self.scrollView.bounds)*PageNo, centerY)];
         [self.scrollView addSubview:cell];
-        
         UITapGestureRecognizer* tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(actionForItem:)];
         [cell addGestureRecognizer:tap];
         
         [items addObject:cell];
     }
     
-    UIView *scrollBG = [[UIView alloc] initWithFrame:CGRectMake(margin, 8, CGRectGetWidth(self.scrollView.frame) - margin * 2, CGRectGetHeight(self.scrollView.frame))];
-    scrollBG.backgroundColor = [UIColor whiteColor];
-    scrollBG.alpha = 0.9;
-    scrollBG.clipsToBounds = YES;
-    scrollBG.layer.cornerRadius = 5;
-    [self.contentView insertSubview:scrollBG belowSubview:self.scrollView];
+//    UIView *scrollBG = [[UIView alloc] initWithFrame:CGRectMake(margin, 8, CGRectGetWidth(self.scrollView.frame) - margin * 2, CGRectGetHeight(self.scrollView.frame))];
+//    scrollBG.backgroundColor = [UIColor whiteColor];
+//    scrollBG.alpha = 0.9;
+//    scrollBG.clipsToBounds = YES;
+//    scrollBG.layer.cornerRadius = 5;
+//    [self.contentView insertSubview:scrollBG belowSubview:self.scrollView];
     
     CGFloat y = CGRectGetMinY(self.pageControl.frame) +  5 + (self.pageControl.numberOfPages == 1 ? 0 : CGRectGetHeight(self.pageControl.frame));
-    UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
-    btn.frame = CGRectMake(margin, y, CGRectGetWidth(self.contentView.frame) - margin * 2, 44);
-    [btn setTitle:@"取消" forState:UIControlStateNormal];
-    [btn setTitleColor:[UIColor colorWithRed:0.22 green:0.45 blue:1 alpha:1] forState:UIControlStateNormal];
-    [self setBtn:btn backgroundColor:[UIColor colorWithWhite:1 alpha:0.9]];
-    btn.layer.cornerRadius = 5;
-    btn.clipsToBounds = YES;
-    [btn addTarget:self action:@selector(dismiss) forControlEvents:UIControlEventTouchUpInside];
-    [self.contentView addSubview:btn];
     
-    CGFloat height = CGRectGetMinY(btn.frame) + CGRectGetHeight(btn.frame) + 10;
+    if (self.showCancelButton) {
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeCustom];
+        btn.frame = CGRectMake(margin, y, CGRectGetWidth(self.contentView.frame) - margin * 2, 44);
+        [btn setTitle:@"取消" forState:UIControlStateNormal];
+        [btn setTitleColor:[UIColor colorWithRed:0.22 green:0.45 blue:1 alpha:1] forState:UIControlStateNormal];
+        [self setBtn:btn backgroundColor:[UIColor colorWithWhite:1 alpha:0.9]];
+        btn.layer.cornerRadius = 5;
+        btn.clipsToBounds = YES;
+        [btn addTarget:self action:@selector(dismiss) forControlEvents:UIControlEventTouchUpInside];
+        [self.contentView addSubview:btn];
+        
+        CGFloat height = CGRectGetMinY(btn.frame) + CGRectGetHeight(btn.frame) + 10;
+        
+        CGRect frame = self.contentView.frame;
+        frame.size.height = height;
+        self.contentView.frame = frame;
+    }
+    else
+    {
+        CGRect frame = self.contentView.frame;
+        frame.size.height = y;
+        self.contentView.frame = frame;
+    }
     
-    CGRect frame = self.contentView.frame;
-    frame.size.height = height;
-    self.contentView.frame = frame;
 }
 
 - (void)setBtn:(UIButton*)btn backgroundColor:(UIColor*)color
@@ -221,13 +236,13 @@ static AWActionSheet *sheet = nil;
 
 - (IBAction)changePage:(id)sender {
     int page = (int)pageControl.currentPage;
-    [scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.contentView.bounds) * page, 0)];
+    [scrollView setContentOffset:CGPointMake(CGRectGetWidth(self.scrollView.bounds) * page, 0)];
 }
 #pragma mark -
 #pragma scrollview delegate
 
 - (void)scrollViewDidScroll:(UIScrollView *)sender {
-    int page = scrollView.contentOffset.x /CGRectGetWidth(self.contentView.bounds);
+    int page = scrollView.contentOffset.x /CGRectGetWidth(self.scrollView.bounds);
     pageControl.currentPage = page;
 }
 
